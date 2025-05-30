@@ -28,7 +28,7 @@
 * [CI/CD Pipeline](technical/07-ci-cd.md)
 * [Blockchain Integration](technical/08-multichain.md)
 * [Technical Governance](technical/09-governance.md)
-* [Environment Variables](technical/environment-variables.md)
+* [Environment Variables](technical/15-environment-variables.md)
 
 ## Core Features
 
