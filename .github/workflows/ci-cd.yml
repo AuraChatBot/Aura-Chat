@@ -1,0 +1,117 @@
+name: CI / CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - '**'
+
+env:
+  NODE_VERSION: '18'
+  HARDHAT_NETWORK: hardhat
+
+jobs:
+
+  # 1) Lint & Test
+  lint-test:
+    name: 🔍 Lint & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Use Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Run Linter
+        run: yarn lint
+
+      - name: Run Unit & Integration Tests
+        run: yarn test --ci
+
+  # 2) Solidity Security Scan
+  solidity-scan:
+    name: 🛡️ Solidity Security Scan
+    runs-on: ubuntu-latest
+    needs: lint-test
+    container:
+      image: trailofbits/otx-slither:latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Run Slither
+        run: slither contracts --fail-on-high --exit-on-findings
+
+  # 3) Compile & Build All Layers
+  build:
+    name: 🏗️ Build & Compile
+    runs-on: ubuntu-latest
+    needs: [lint-test, solidity-scan]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Use Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Compile Smart Contracts
+        working-directory: contracts
+        run: |
+          yarn compile
+      - name: Build Backend
+        working-directory: src
+        run: yarn build
+      - name: Build Frontend
+        working-directory: web
+        run: yarn build
+      - name: Build Bots
+        working-directory: bots
+        run: yarn build
+
+  # 4) (Optional) Deploy on main
+  # deploy:
+  #   name: 🚀 Deploy to Production
+  #   runs-on: ubuntu-latest
+  #   needs: build
+  #   if: github.ref == 'refs/heads/main'
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v3
+  # 
+  #     # Insert your deployment steps here, for example:
+  #     # - name: Configure AWS credentials
+  #     #   uses: aws-actions/configure-aws-credentials@v2
+  #     #   with:
+  #     #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #     #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #     #
+  #     # - name: Terraform Apply
+  #     #   working-directory: infra
+  #     #   run: terraform init && terraform apply -auto-approve
+  #     #
+  #     # - name: Helm Deploy
+  #     #   run: |
+  #     #     helm upgrade --install aura-backend k8s/charts/backend \
+  #     #       --namespace aura-prod --values k8s/values-prod.yaml \
+  #     #       --set image.tag=${{ github.sha }}
+  #     #     helm upgrade --install aura-frontend k8s/charts/frontend \
+  #     #       --namespace aura-prod --values k8s/values-prod.yaml \
+  #     #       --set image.tag=${{ github.sha }}
+  #     #
+  #     - name: Smoke Test
+  #       run: curl -f https://app.aurabot.xyz/health || (echo "Health check failed" && exit 1) 
