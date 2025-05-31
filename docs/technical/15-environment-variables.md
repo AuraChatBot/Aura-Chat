@@ -17,7 +17,7 @@ The Pheme Protocol uses a multi-layered environment configuration approach:
 
 ```env
 # Web3 Configuration
-NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID=your_project_id
+NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_project_id
 NEXT_PUBLIC_DEFAULT_CHAIN=1 # Ethereum Mainnet
 
 # API Configuration

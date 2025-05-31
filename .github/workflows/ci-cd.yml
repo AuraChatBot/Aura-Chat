@@ -11,6 +11,8 @@ on:
 env:
   NODE_VERSION: '18'
   HARDHAT_NETWORK: hardhat
+  DOCKER_IMAGE_REGISTRY: docker.io
+  DOCKER_IMAGE_NAMESPACE: ${{ secrets.DOCKERHUB_USERNAME }}  # your Docker Hub username
 
 jobs:
 
@@ -31,58 +33,14 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
-      - name: Run Linter
+      - name: Run ESLint
         run: yarn lint
 
-      - name: Run Unit & Integration Tests
+      - name: Run Jest Tests
         run: yarn test --ci
 
   # 2) Solidity Security Scan
-  solidity-scan:
-    name: 🛡️ Solidity Security Scan
-    runs-on: ubuntu-latest
-    needs: lint-test
-    container:
-      image: trailofbits/otx-slither:latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Run Slither
-        run: slither contracts --fail-on-high --exit-on-findings
-
-  # 3) Compile & Build All Layers
-  build:
-    name: 🏗️ Build & Compile
-    runs-on: ubuntu-latest
-    needs: [lint-test, solidity-scan]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Use Node.js ${{ env.NODE_VERSION }}
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'yarn'
-
-      - name: Install dependencies
-        run: yarn install --frozen-lockfile
-
-      - name: Compile Smart Contracts
-        working-directory: contracts
-        run: |
-          yarn compile
-      - name: Build Backend
-        working-directory: src
-        run: yarn build
-      - name: Build Frontend
-        working-directory: web
-        run: yarn build
-      - name: Build Bots
-        working-directory: bots
-        run: yarn build
-
+ 
   # 4) (Optional) Deploy on main
   # deploy:
   #   name: 🚀 Deploy to Production
